@@ -141,6 +141,14 @@ impl Region {
         out.extend(self.suffix);
         out
     }
+
+    /// Return a cloned Vec<Line> of this region's lines without consuming it.
+    /// Useful when callers need to iterate lines but want to keep the Region.
+    pub fn lines(&self) -> Vec<Line> {
+        let mut out = self.lines.clone();
+        out.extend(self.suffix.clone());
+        out
+    }
 }
 
 impl Display for Region {

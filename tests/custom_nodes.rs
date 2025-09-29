@@ -3,6 +3,7 @@ use pulldown_cmark_writer::ast::custom::{BlockNode, InlineNode};
 use pulldown_cmark_writer::ast::{
     Block, Inline, block_to_events, inline_to_events, writer::blocks_to_markdown,
 };
+use pulldown_cmark_writer::{Line, Region};
 use std::sync::Arc;
 
 // A simple custom inline node that renders as emphasized text containing its payload.
@@ -16,6 +17,9 @@ impl InlineNode for MyInline {
             Event::End(pulldown_cmark::TagEnd::Emphasis),
         ]
     }
+    fn to_line(&self) -> Line {
+        Line::from_str(&format!("*{}*", self.0))
+    }
 }
 
 // A simple custom block node that renders an HTML block with provided content.
@@ -24,6 +28,9 @@ struct MyBlock(String);
 impl BlockNode for MyBlock {
     fn to_events(&self) -> Vec<Event<'static>> {
         vec![Event::Html(CowStr::from(self.0.clone()))]
+    }
+    fn to_region(&self) -> Region {
+        Region::from_str(&self.0)
     }
 }
 

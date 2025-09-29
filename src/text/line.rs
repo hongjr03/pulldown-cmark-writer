@@ -42,6 +42,13 @@ impl Line {
         }
         out
     }
+
+    /// Extend this line by cloning fragments from another line. This is a
+    /// cheap operation because `Fragment` is internally an `Arc<str>`.
+    pub fn extend_from_line(&mut self, other: &Line) -> &mut Self {
+        self.fragments.extend(other.fragments.clone());
+        self
+    }
 }
 
 impl Display for Line {

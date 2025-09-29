@@ -2,12 +2,12 @@ use crate::ast::{Block, Inline};
 use crate::text::{Line, Region};
 use pulldown_cmark::{Alignment as PAlign, CodeBlockKind, HeadingLevel};
 
-use super::inline::append_inline_to_line;
+use super::inline::inline_to_line;
 use super::utils::pad_to_width;
 
 fn render_paragraph(p: &Vec<Inline>) -> Region {
     let mut r = Region::new();
-    let mut defs: Vec<(String, String, String)> = Vec::new();
+    let mut defs: Vec<super::inline::ReferenceDef> = Vec::new();
     let mut curr = Line::new();
     for inl in p {
         match inl {
@@ -23,9 +23,10 @@ fn render_paragraph(p: &Vec<Inline>) -> Region {
                 curr = Line::new();
             }
             _ => {
-                let mut tmp = Line::new();
-                if let Some(def) = append_inline_to_line(&mut tmp, inl) {
-                    if !defs.iter().any(|d| d.0 == def.0) {
+                let (ln, def) = inline_to_line(inl);
+                let tmp = ln;
+                if let Some(def) = def {
+                    if !defs.iter().any(|d| d.id == def.id) {
                         defs.push(def);
                     }
                 }
@@ -47,11 +48,14 @@ fn render_paragraph(p: &Vec<Inline>) -> Region {
     if !defs.is_empty() && !r.is_empty() {
         r.push_back_line(Line::from_str(""));
     }
-    for (id, dest, title) in defs {
-        if title.is_empty() {
-            r.push_back_suffix_line(Line::from_str(&format!("[{}]: {}", id, dest)));
+    for def in defs {
+        if def.title.is_empty() {
+            r.push_back_suffix_line(Line::from_str(&format!("[{}]: {}", def.id, def.dest)));
         } else {
-            r.push_back_suffix_line(Line::from_str(&format!("[{}]: {} \"{}\"", id, dest, title)));
+            r.push_back_suffix_line(Line::from_str(&format!(
+                "[{}]: {} \"{}\"",
+                def.id, def.dest, def.title
+            )));
         }
     }
     r
@@ -71,7 +75,8 @@ fn render_heading(level: &HeadingLevel, content: &Vec<Inline>) -> Region {
     l.push(std::iter::repeat('#').take(n).collect::<String>());
     l.push(" ");
     for inl in content {
-        append_inline_to_line(&mut l, inl);
+        let (ln, _def) = inline_to_line(inl);
+        l.extend_from_line(&ln);
     }
     r.push_back_line(l);
     r
@@ -231,7 +236,8 @@ fn render_footnote_def(id: &str, children: &Vec<Block>) -> Region {
 fn cell_to_lines(cell: &Vec<Inline>) -> Vec<String> {
     let mut l = Line::new();
     for inl in cell {
-        append_inline_to_line(&mut l, inl);
+        let (ln, _def) = inline_to_line(inl);
+        l.extend_from_line(&ln);
     }
     l.apply().split('\n').map(|s| s.to_string()).collect()
 }
@@ -350,24 +356,7 @@ pub fn block_to_region(b: &Block) -> Region {
         Block::Rule => render_rule(),
         Block::FootnoteDefinition(id, children) => render_footnote_def(id, children),
         Block::Table(aligns, rows) => render_table_full(aligns, rows),
-        Block::Custom(c) => {
-            // Flatten custom block events into lines: collect Text/Html events
-            let mut r = Region::new();
-            for ev in c.to_events() {
-                match ev {
-                    pulldown_cmark::Event::Text(t) | pulldown_cmark::Event::Html(t) => {
-                        for l in t.into_string().lines() {
-                            r.push_back_line(Line::from_str(l));
-                        }
-                    }
-                    pulldown_cmark::Event::Start(_) | pulldown_cmark::Event::End(_) => {
-                        // ignore structural tags when flattening
-                    }
-                    _ => {}
-                }
-            }
-            r
-        }
+        Block::Custom(c) => c.to_region(),
         _ => Region::new(),
     }
 }

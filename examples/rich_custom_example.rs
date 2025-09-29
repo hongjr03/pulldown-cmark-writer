@@ -7,6 +7,7 @@
 use pulldown_cmark::{
     Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, LinkType, Tag, TagEnd, html,
 };
+use pulldown_cmark_writer::Line;
 use pulldown_cmark_writer::ast::custom::{BlockNode, InlineNode};
 use pulldown_cmark_writer::ast::{Block, Inline, block_to_events, writer::blocks_to_markdown};
 use pulldown_cmark_writer::text::Region;
@@ -22,6 +23,9 @@ impl InlineNode for BoldInline {
             Event::Text(CowStr::from(self.0.clone())),
             Event::End(TagEnd::Strong),
         ]
+    }
+    fn to_line(&self) -> Line {
+        Line::from_str(&format!("**{}**", self.0))
     }
 }
 
@@ -47,6 +51,17 @@ impl BlockNode for WarningBlock {
 
         events.push(Event::End(TagEnd::BlockQuote(None)));
         events
+    }
+    fn to_region(&self) -> Region {
+        let mut region = Region::from_str(&format!("⚠️ **{}**\n", self.title));
+        for block in &self.content {
+            let block_region = blocks_to_markdown(&[block.clone()]);
+            for line in block_region.lines() {
+                region.push_back_line(Line::from_str(&format!("{}", line)));
+            }
+        }
+        region.prefix_each_line("> ".to_string());
+        region
     }
 }
 

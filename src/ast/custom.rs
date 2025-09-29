@@ -4,6 +4,7 @@
 //! inline/block nodes. We provide default marker types so the library
 //! remains compatible when the user doesn't supply custom nodes.
 
+use crate::{Line, Region};
 use pulldown_cmark::Event;
 
 /// Trait describing a user-defined block node.
@@ -13,12 +14,20 @@ use pulldown_cmark::Event;
 pub trait BlockNode: std::fmt::Debug + Send + Sync {
     /// Convert the custom block into owned pulldown-cmark events.
     fn to_events(&self) -> Vec<Event<'static>>;
+    /// Provide a direct rendering of this block as a `Region`.
+    /// The writer will use this `Region` directly when
+    /// converting blocks to markdown.
+    fn to_region(&self) -> Region;
 }
 
 /// Trait describing a user-defined inline node.
 pub trait InlineNode: std::fmt::Debug + Send + Sync {
     /// Convert the custom inline into owned pulldown-cmark events.
     fn to_events(&self) -> Vec<Event<'static>>;
+    /// Provide a direct rendering of this inline as a `Line`.
+    /// The writer will use this `Line` directly when
+    /// converting inlines to markdown.
+    fn to_line(&self) -> Line;
 }
 
 /// Optional trait that allows consumers to provide a parser for custom
@@ -41,6 +50,9 @@ impl BlockNode for NoBlock {
     fn to_events(&self) -> Vec<Event<'static>> {
         Vec::new()
     }
+    fn to_region(&self) -> Region {
+        Region::new()
+    }
 }
 
 /// Default empty marker for when no custom inline node is used.
@@ -49,5 +61,8 @@ pub struct NoInline;
 impl InlineNode for NoInline {
     fn to_events(&self) -> Vec<Event<'static>> {
         Vec::new()
+    }
+    fn to_line(&self) -> Line {
+        Line::new()
     }
 }
