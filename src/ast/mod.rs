@@ -1,8 +1,8 @@
 pub mod block;
+pub mod custom;
 pub mod inline;
 pub mod parse;
 pub mod writer;
-pub mod custom;
 
 pub use block::Block;
 pub use block::block_to_events;
@@ -23,12 +23,12 @@ pub use custom::{BlockNode, InlineNode};
 /// - `parent_collects_inlines`: whether the parent frame is collecting inlines
 /// - `event_index`: current event index in the original slice
 pub struct ParseContext {
-	/// current stack depth (0 == top-level)
-	pub depth: usize,
-	/// parent's tag (if any), converted to a 'static Tag for convenience
-	pub parent_tag: Option<pulldown_cmark::Tag<'static>>,
-	/// whether parent frame (if any) is collecting inlines
-	pub parent_collects_inlines: bool,
-	/// current event index in the original slice
-	pub event_index: usize,
+    /// current stack depth (0 == top-level)
+    pub depth: usize,
+    /// parent's tag (if any), converted to a 'static Tag for convenience
+    pub parent_tag: Option<pulldown_cmark::Tag<'static>>,
+    /// whether parent frame (if any) is collecting inlines
+    pub parent_collects_inlines: bool,
+    /// current event index in the original slice
+    pub event_index: usize,
 }

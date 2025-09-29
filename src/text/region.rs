@@ -1,5 +1,5 @@
-use std::fmt::{self, Display, Formatter};
 use super::{Fragment, Line};
+use std::fmt::{self, Display, Formatter};
 
 /// A Region is a 2D collection of lines. We provide chainable operations that
 /// mutate the region in-place and return &mut Self so callers can chain many
@@ -18,7 +18,10 @@ pub struct Region {
 
 impl Region {
     pub fn new() -> Self {
-        Region { lines: Vec::new(), suffix: Vec::new() }
+        Region {
+            lines: Vec::new(),
+            suffix: Vec::new(),
+        }
     }
 
     /// Create a region from a multiline &str (split on "\n")
@@ -28,7 +31,10 @@ impl Region {
         } else {
             s.split('\n').map(|l| Line::from_str(l)).collect()
         };
-        Region { lines, suffix: Vec::new() }
+        Region {
+            lines,
+            suffix: Vec::new(),
+        }
     }
 
     /// Push a line to the front

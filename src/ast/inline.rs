@@ -1,6 +1,6 @@
+use crate::ast::custom::InlineNode;
 use crate::text::Region;
 use pulldown_cmark::{CowStr, Event, Tag, TagEnd};
-use crate::ast::custom::InlineNode;
 use std::sync::Arc;
 
 /// Inline level AST nodes. They own their text via `Region` which composes
@@ -142,6 +142,6 @@ pub fn inline_to_events(inl: &Inline) -> Vec<Event<'static>> {
         Inline::FootnoteReference(s) => vec![Event::FootnoteReference(CowStr::from(s.clone()))],
         Inline::InlineMath(r) => vec![Event::InlineMath(CowStr::from(r.apply()))],
         Inline::DisplayMath(r) => vec![Event::DisplayMath(CowStr::from(r.apply()))],
-            Inline::Custom(c) => c.to_events(),
+        Inline::Custom(c) => c.to_events(),
     }
 }

@@ -4,7 +4,6 @@ use pulldown_cmark::{Alignment as PAlign, CodeBlockKind, HeadingLevel};
 
 use super::inline::append_inline_to_line;
 use super::utils::pad_to_width;
-// blocks writer doesn't need the custom trait import here
 
 fn render_paragraph(p: &Vec<Inline>) -> Region {
     let mut r = Region::new();
@@ -191,7 +190,7 @@ fn render_list(ordered: bool, start: Option<u64>, items: &Vec<Vec<Block>>) -> Re
         for l in item_region.into_lines() {
             r.push_back_line(l);
         }
-        r.push_back_line(Line::from_str(""));
+        // r.push_back_line(Line::from_str(""));
     }
     r
 }
@@ -350,7 +349,7 @@ pub fn block_to_region(b: &Block) -> Region {
         Block::List { start, items } => render_list(start.is_some(), *start, items),
         Block::Rule => render_rule(),
         Block::FootnoteDefinition(id, children) => render_footnote_def(id, children),
-        Block::TableFull(aligns, rows) => render_table_full(aligns, rows),
+        Block::Table(aligns, rows) => render_table_full(aligns, rows),
         Block::Custom(c) => {
             // Flatten custom block events into lines: collect Text/Html events
             let mut r = Region::new();

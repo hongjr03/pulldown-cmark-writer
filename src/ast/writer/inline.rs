@@ -171,17 +171,37 @@ pub fn append_inline_to_line(line: &mut Line, inl: &Inline) -> Option<(String, S
                     pulldown_cmark::Event::Start(tag) => {
                         use pulldown_cmark::Tag;
                         match tag {
-                            Tag::Emphasis => { line.push("*"); },
-                            Tag::Strong => { line.push("**"); },
-                            Tag::Strikethrough => { line.push("~~"); },
-                            Tag::Subscript => { line.push("~{"); },
-                            Tag::Superscript => { line.push("^{"); },
-                            Tag::Link { link_type: _, dest_url, title, id: _ } => {
+                            Tag::Emphasis => {
+                                line.push("*");
+                            }
+                            Tag::Strong => {
+                                line.push("**");
+                            }
+                            Tag::Strikethrough => {
+                                line.push("~~");
+                            }
+                            Tag::Subscript => {
+                                line.push("~{");
+                            }
+                            Tag::Superscript => {
+                                line.push("^{");
+                            }
+                            Tag::Link {
+                                link_type: _,
+                                dest_url,
+                                title,
+                                id: _,
+                            } => {
                                 // open link text
                                 line.push("[");
                                 link_stack.push((false, dest_url.to_string(), title.to_string()));
                             }
-                            Tag::Image { link_type: _, dest_url, title, id: _ } => {
+                            Tag::Image {
+                                link_type: _,
+                                dest_url,
+                                title,
+                                id: _,
+                            } => {
                                 // open image text
                                 line.push("![");
                                 link_stack.push((true, dest_url.to_string(), title.to_string()));
@@ -192,11 +212,21 @@ pub fn append_inline_to_line(line: &mut Line, inl: &Inline) -> Option<(String, S
                     pulldown_cmark::Event::End(tagend) => {
                         use pulldown_cmark::TagEnd;
                         match tagend {
-                            TagEnd::Emphasis => { line.push("*"); },
-                            TagEnd::Strong => { line.push("**"); },
-                            TagEnd::Strikethrough => { line.push("~~"); },
-                            TagEnd::Subscript => { line.push("}"); },
-                            TagEnd::Superscript => { line.push("}"); },
+                            TagEnd::Emphasis => {
+                                line.push("*");
+                            }
+                            TagEnd::Strong => {
+                                line.push("**");
+                            }
+                            TagEnd::Strikethrough => {
+                                line.push("~~");
+                            }
+                            TagEnd::Subscript => {
+                                line.push("}");
+                            }
+                            TagEnd::Superscript => {
+                                line.push("}");
+                            }
                             TagEnd::Link => {
                                 if let Some((is_image, dest, title)) = link_stack.pop() {
                                     if is_image {

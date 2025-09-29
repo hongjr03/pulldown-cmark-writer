@@ -1,6 +1,6 @@
-use pulldown_cmark::{Parser, Event, Options};
-use pulldown_cmark_writer::ast::{parse_events_to_blocks, block_to_events, blocks_to_markdown};
-use similar::{TextDiff, ChangeTag};
+use pulldown_cmark::{Event, Options, Parser};
+use pulldown_cmark_writer::ast::{block_to_events, blocks_to_markdown, parse_events_to_blocks};
+use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::path::Path;
 
@@ -101,7 +101,7 @@ fn filter_paragraph_events(events: Vec<Event<'static>>) -> Vec<Event<'static>> {
 // semantic comparison that tolerates differences in how text was split into
 // individual Event::Text chunks.
 fn canonicalize_events(events: Vec<Event<'static>>) -> Vec<String> {
-    use pulldown_cmark::{Tag, CodeBlockKind};
+    use pulldown_cmark::{CodeBlockKind, Tag};
     let mut out: Vec<String> = Vec::new();
     let mut acc: Option<String> = None;
     for ev in events {
@@ -130,9 +130,16 @@ fn canonicalize_events(events: Vec<Event<'static>>) -> Vec<String> {
                         CodeBlockKind::Fenced(lang) => {
                             out.push(format!("Start(CodeBlock(Fenced({:?})))", lang.to_string()));
                         }
-                        CodeBlockKind::Indented => out.push("Start(CodeBlock(Indented))".to_string()),
+                        CodeBlockKind::Indented => {
+                            out.push("Start(CodeBlock(Indented))".to_string())
+                        }
                     },
-                    Tag::Link { link_type, dest_url, title, id } => {
+                    Tag::Link {
+                        link_type,
+                        dest_url,
+                        title,
+                        id,
+                    } => {
                         out.push(format!(
                             "Start(Link {{ link_type: {:?}, dest_url: {:?}, title: {:?}, id: {:?} }})",
                             link_type,
@@ -141,7 +148,12 @@ fn canonicalize_events(events: Vec<Event<'static>>) -> Vec<String> {
                             id.to_string()
                         ));
                     }
-                    Tag::Image { link_type, dest_url, title, id } => {
+                    Tag::Image {
+                        link_type,
+                        dest_url,
+                        title,
+                        id,
+                    } => {
                         out.push(format!(
                             "Start(Image {{ link_type: {:?}, dest_url: {:?}, title: {:?}, id: {:?} }})",
                             link_type,
@@ -186,7 +198,8 @@ fn fixtures_events_roundtrip() {
         let s = fs::read_to_string(&f).unwrap();
         let parser = Parser::new_ext(&s, Options::empty());
         let events: Vec<Event> = parser.collect();
-        let events_static: Vec<Event<'static>> = events.into_iter().map(|e| e.into_static()).collect();
+        let events_static: Vec<Event<'static>> =
+            events.into_iter().map(|e| e.into_static()).collect();
 
         // parse -> ast -> events
         let ast = parse_events_to_blocks(&events_static);
@@ -199,15 +212,16 @@ fn fixtures_events_roundtrip() {
         let md = blocks_to_markdown(&ast);
         let p2 = Parser::new_ext(&md, Options::empty());
         let events_md: Vec<Event> = p2.collect();
-        let events_md_static: Vec<Event<'static>> = events_md.into_iter().map(|e| e.into_static()).collect();
-    let events_md_norm = filter_paragraph_events(normalize_events(events_md_static));
-    let md_canon = canonicalize_events(events_md_norm);
-    let ev_norm = filter_paragraph_events(normalize_events(events_static));
-    let out_norm = filter_paragraph_events(normalize_events(out_events));
+        let events_md_static: Vec<Event<'static>> =
+            events_md.into_iter().map(|e| e.into_static()).collect();
+        let events_md_norm = filter_paragraph_events(normalize_events(events_md_static));
+        let md_canon = canonicalize_events(events_md_norm);
+        let ev_norm = filter_paragraph_events(normalize_events(events_static));
+        let out_norm = filter_paragraph_events(normalize_events(out_events));
 
-    // canonicalize by collapsing Text runs into single tokens for comparison
-    let ev_canon = canonicalize_events(ev_norm);
-    let out_canon = canonicalize_events(out_norm);
+        // canonicalize by collapsing Text runs into single tokens for comparison
+        let ev_canon = canonicalize_events(ev_norm);
+        let out_canon = canonicalize_events(out_norm);
 
         // For debugging show filename on failure
         if ev_canon != out_canon {
@@ -246,6 +260,10 @@ fn fixtures_events_roundtrip() {
             }
             eprintln!();
         }
-        assert_eq!(ev_canon, md_canon, "markdown reparse roundtrip mismatch for {:?}", f);
+        assert_eq!(
+            ev_canon, md_canon,
+            "markdown reparse roundtrip mismatch for {:?}",
+            f
+        );
     }
 }

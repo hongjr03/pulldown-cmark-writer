@@ -18,7 +18,13 @@ use pulldown_cmark::{Event, Tag};
 
 pub fn parse_events_to_blocks_with_hook<'a>(
     events: &[Event<'a>],
-    mut hook: Option<&mut dyn for<'b> FnMut(&'b [Event<'b>], usize, &crate::ast::ParseContext) -> Option<(usize, Block)>>,
+    mut hook: Option<
+        &mut dyn for<'b> FnMut(
+            &'b [Event<'b>],
+            usize,
+            &crate::ast::ParseContext,
+        ) -> Option<(usize, Block)>,
+    >,
 ) -> Vec<Block> {
     // A simple stack frame used while parsing Start/End pairs.
     struct Frame<'a> {
@@ -181,23 +187,21 @@ pub fn parse_events_to_blocks_with_hook<'a>(
                                 match b {
                                     Block::TableRow(cells) => rows.push(cells),
                                     Block::Paragraph(inls) => rows.push(vec![inls]),
-                                    other => {
-                                        match other {
-                                            Block::Item(children) => {
-                                                let mut inls_acc: Vec<Inline> = Vec::new();
-                                                for ch in children {
-                                                    if let Block::Paragraph(mut p_inls) = ch {
-                                                        inls_acc.append(&mut p_inls);
-                                                    }
+                                    other => match other {
+                                        Block::Item(children) => {
+                                            let mut inls_acc: Vec<Inline> = Vec::new();
+                                            for ch in children {
+                                                if let Block::Paragraph(mut p_inls) = ch {
+                                                    inls_acc.append(&mut p_inls);
                                                 }
-                                                rows.push(vec![inls_acc]);
                                             }
-                                            _ => {}
+                                            rows.push(vec![inls_acc]);
                                         }
-                                    }
+                                        _ => {}
+                                    },
                                 }
                             }
-                            Block::TableFull(aligns, rows)
+                            Block::Table(aligns, rows)
                         }
                         TableHead | TableRow => {
                             let mut row_cells: Vec<Vec<Inline>> = Vec::new();
@@ -378,9 +382,15 @@ pub fn parse_events_to_blocks_with_hook<'a>(
             }
             Event::TaskListMarker(b) => {
                 if let Some(top) = stack.last_mut() {
-                    top.inlines.push(Inline::Text(Region::from_str(if *b { "[x]" } else { "[ ]" })));
+                    top.inlines.push(Inline::Text(Region::from_str(if *b {
+                        "[x]"
+                    } else {
+                        "[ ]"
+                    })));
                 } else {
-                    out.push(Block::Paragraph(vec![Inline::Text(Region::from_str(if *b { "[x]" } else { "[ ]" }))]));
+                    out.push(Block::Paragraph(vec![Inline::Text(Region::from_str(
+                        if *b { "[x]" } else { "[ ]" },
+                    ))]));
                 }
                 i += 1;
             }
@@ -428,14 +438,14 @@ pub fn parse_events_to_blocks_with_parsers<'a>(
     events: &[Event<'a>],
     parsers: &[&dyn crate::ast::custom::BlockParser],
 ) -> Vec<Block> {
-    let mut hook = |evs: &[Event], i: usize, ctx: &crate::ast::ParseContext| -> Option<(usize, Block)> {
-        for p in parsers.iter() {
-            if let Some((consumed, blk)) = p.try_parse(evs, i, ctx) {
-                return Some((consumed, blk));
+    let mut hook =
+        |evs: &[Event], i: usize, ctx: &crate::ast::ParseContext| -> Option<(usize, Block)> {
+            for p in parsers.iter() {
+                if let Some((consumed, blk)) = p.try_parse(evs, i, ctx) {
+                    return Some((consumed, blk));
+                }
             }
-        }
-        None
-    };
+            None
+        };
     parse_events_to_blocks_with_hook(events, Some(&mut hook))
 }
- 

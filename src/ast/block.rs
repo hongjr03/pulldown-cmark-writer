@@ -1,8 +1,8 @@
-use crate::ast::inline::{Inline, inline_to_events};
 use crate::ast::custom::BlockNode;
-use std::sync::Arc;
+use crate::ast::inline::{Inline, inline_to_events};
 use crate::text::Region;
 use pulldown_cmark::{Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
+use std::sync::Arc;
 
 /// Block level AST nodes.
 #[derive(Clone, Debug)]
@@ -28,9 +28,9 @@ pub enum Block {
     Item(Vec<Block>),
     Rule,
     FootnoteDefinition(String, Vec<Block>),
-    Table(Vec<Alignment>),
+    TablePlaceholder(Vec<Alignment>),
     TableRow(Vec<Vec<crate::ast::inline::Inline>>),
-    TableFull(Vec<Alignment>, Vec<Vec<Vec<crate::ast::inline::Inline>>>),
+    Table(Vec<Alignment>, Vec<Vec<Vec<crate::ast::inline::Inline>>>),
     /// A user-provided custom block node.
     Custom(Arc<dyn BlockNode + 'static>),
 }
@@ -113,9 +113,40 @@ pub fn block_to_events(b: &Block) -> Vec<Event<'static>> {
             out.push(Event::End(TagEnd::FootnoteDefinition));
             out
         }
-        Block::Table(_aligns) => vec![],
-        Block::TableRow(_) => vec![],
-        Block::TableFull(_, _) => vec![],
+        Block::TablePlaceholder(aligns) => {
+            vec![
+                Event::Start(Tag::Table(aligns.clone())),
+                Event::End(TagEnd::Table),
+            ]
+        }
+        Block::TableRow(cells) => {
+            let mut out = vec![Event::Start(Tag::TableRow)];
+            for cell in cells {
+                out.push(Event::Start(Tag::TableCell));
+                for inl in cell {
+                    out.extend(inline_to_events(inl));
+                }
+                out.push(Event::End(TagEnd::TableCell));
+            }
+            out.push(Event::End(TagEnd::TableRow));
+            out
+        }
+        Block::Table(aligns, rows) => {
+            let mut out = vec![Event::Start(Tag::Table(aligns.clone()))];
+            for row in rows {
+                out.push(Event::Start(Tag::TableRow));
+                for cell in row {
+                    out.push(Event::Start(Tag::TableCell));
+                    for inl in cell {
+                        out.extend(inline_to_events(inl));
+                    }
+                    out.push(Event::End(TagEnd::TableCell));
+                }
+                out.push(Event::End(TagEnd::TableRow));
+            }
+            out.push(Event::End(TagEnd::Table));
+            out
+        }
         Block::Custom(c) => c.to_events(),
     }
 }

@@ -1,6 +1,8 @@
-use pulldown_cmark::{Event, Tag, CowStr};
-use pulldown_cmark_writer::ast::{Block, Inline, block_to_events, inline_to_events, writer::blocks_to_markdown};
+use pulldown_cmark::{CowStr, Event, Tag};
 use pulldown_cmark_writer::ast::custom::{BlockNode, InlineNode};
+use pulldown_cmark_writer::ast::{
+    Block, Inline, block_to_events, inline_to_events, writer::blocks_to_markdown,
+};
 use std::sync::Arc;
 
 // A simple custom inline node that renders as emphasized text containing its payload.

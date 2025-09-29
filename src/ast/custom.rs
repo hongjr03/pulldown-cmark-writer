@@ -26,7 +26,12 @@ pub trait InlineNode: std::fmt::Debug + Send + Sync {
 /// current position match their node and return the number of consumed
 /// events along with a constructed `Block` when they do.
 pub trait BlockParser: Send + Sync {
-    fn try_parse(&self, events: &[Event], idx: usize, ctx: &crate::ast::ParseContext) -> Option<(usize, crate::ast::Block)>;
+    fn try_parse(
+        &self,
+        events: &[Event],
+        idx: usize,
+        ctx: &crate::ast::ParseContext,
+    ) -> Option<(usize, crate::ast::Block)>;
 }
 
 /// Default empty marker for when no custom block node is used.
