@@ -16,7 +16,7 @@ fn render_paragraph(p: &Vec<Inline>) -> Region {
                 curr = Line::new();
             }
             Inline::HardBreak => {
-                curr.push("  ");
+                r.push_back_line(Line::new());
                 r.push_back_line(curr);
                 curr = Line::new();
             }
