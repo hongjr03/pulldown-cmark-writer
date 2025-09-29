@@ -1,5 +1,6 @@
 use crate::ast::Inline;
 use crate::text::Line;
+// inline writer doesn't need the custom trait import here
 
 pub fn append_inline_to_line(line: &mut Line, inl: &Inline) -> Option<(String, String, String)> {
     match inl {
@@ -143,6 +144,99 @@ pub fn append_inline_to_line(line: &mut Line, inl: &Inline) -> Option<(String, S
             line.push("\n$$\n");
             line.push(r.apply());
             line.push("\n$$\n");
+        }
+        Inline::Custom(c_arc) => {
+            let c = c_arc.clone();
+            // small stack to hold link/image destinations for End handling
+            let mut link_stack: Vec<(bool, String, String)> = Vec::new();
+            for ev in c.to_events() {
+                match ev {
+                    pulldown_cmark::Event::Text(t) => {
+                        line.push(t.into_string());
+                    }
+                    pulldown_cmark::Event::InlineHtml(t) | pulldown_cmark::Event::Html(t) => {
+                        line.push(t.into_string());
+                    }
+                    pulldown_cmark::Event::Code(t) => {
+                        let s = t.into_string();
+                        let ticks = if s.contains('`') { "``" } else { "`" };
+                        line.push(format!("{}{}{}", ticks, s, ticks));
+                    }
+                    pulldown_cmark::Event::SoftBreak => {
+                        line.push(" ");
+                    }
+                    pulldown_cmark::Event::HardBreak => {
+                        line.push("  \n");
+                    }
+                    pulldown_cmark::Event::Start(tag) => {
+                        use pulldown_cmark::Tag;
+                        match tag {
+                            Tag::Emphasis => { line.push("*"); },
+                            Tag::Strong => { line.push("**"); },
+                            Tag::Strikethrough => { line.push("~~"); },
+                            Tag::Subscript => { line.push("~{"); },
+                            Tag::Superscript => { line.push("^{"); },
+                            Tag::Link { link_type: _, dest_url, title, id: _ } => {
+                                // open link text
+                                line.push("[");
+                                link_stack.push((false, dest_url.to_string(), title.to_string()));
+                            }
+                            Tag::Image { link_type: _, dest_url, title, id: _ } => {
+                                // open image text
+                                line.push("![");
+                                link_stack.push((true, dest_url.to_string(), title.to_string()));
+                            }
+                            _ => {}
+                        }
+                    }
+                    pulldown_cmark::Event::End(tagend) => {
+                        use pulldown_cmark::TagEnd;
+                        match tagend {
+                            TagEnd::Emphasis => { line.push("*"); },
+                            TagEnd::Strong => { line.push("**"); },
+                            TagEnd::Strikethrough => { line.push("~~"); },
+                            TagEnd::Subscript => { line.push("}"); },
+                            TagEnd::Superscript => { line.push("}"); },
+                            TagEnd::Link => {
+                                if let Some((is_image, dest, title)) = link_stack.pop() {
+                                    if is_image {
+                                        // close image: ](dest "title")
+                                        if title.is_empty() {
+                                            line.push(format!("]({})", dest));
+                                        } else {
+                                            let safe_title = title.replace('"', "\\\"");
+                                            line.push(format!("]({} \"{}\")", dest, safe_title));
+                                        }
+                                    } else {
+                                        // close link
+                                        if title.is_empty() {
+                                            line.push(format!("]({})", dest));
+                                        } else {
+                                            let safe_title = title.replace('"', "\\\"");
+                                            line.push(format!("]({} \"{}\")", dest, safe_title));
+                                        }
+                                    }
+                                }
+                            }
+                            TagEnd::Image => {
+                                // Image end should be handled by TagEnd::Link branch when pushed as Image start
+                                if let Some((is_image, dest, title)) = link_stack.pop() {
+                                    if is_image {
+                                        if title.is_empty() {
+                                            line.push(format!("]({})", dest));
+                                        } else {
+                                            let safe_title = title.replace('"', "\\\"");
+                                            line.push(format!("]({} \"{}\")", dest, safe_title));
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
     }
     None

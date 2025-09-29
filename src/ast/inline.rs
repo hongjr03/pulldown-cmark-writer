@@ -1,5 +1,7 @@
 use crate::text::Region;
 use pulldown_cmark::{CowStr, Event, Tag, TagEnd};
+use crate::ast::custom::InlineNode;
+use std::sync::Arc;
 
 /// Inline level AST nodes. They own their text via `Region` which composes
 /// `Line`/`Fragment` from `src/text`.
@@ -33,6 +35,9 @@ pub enum Inline {
     FootnoteReference(String),
     InlineMath(Region),
     DisplayMath(Region),
+    /// A user-provided custom inline node. Boxed trait object so the AST
+    /// can carry arbitrary user types that implement `InlineNode`.
+    Custom(Arc<dyn InlineNode + 'static>),
 }
 
 /// Convert `Inline` to a sequence of pulldown-cmark Events (owned, 'static).
@@ -137,5 +142,6 @@ pub fn inline_to_events(inl: &Inline) -> Vec<Event<'static>> {
         Inline::FootnoteReference(s) => vec![Event::FootnoteReference(CowStr::from(s.clone()))],
         Inline::InlineMath(r) => vec![Event::InlineMath(CowStr::from(r.apply()))],
         Inline::DisplayMath(r) => vec![Event::DisplayMath(CowStr::from(r.apply()))],
+            Inline::Custom(c) => c.to_events(),
     }
 }

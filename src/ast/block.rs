@@ -1,4 +1,6 @@
 use crate::ast::inline::{Inline, inline_to_events};
+use crate::ast::custom::BlockNode;
+use std::sync::Arc;
 use crate::text::Region;
 use pulldown_cmark::{Alignment, CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
 
@@ -29,6 +31,8 @@ pub enum Block {
     Table(Vec<Alignment>),
     TableRow(Vec<Vec<crate::ast::inline::Inline>>),
     TableFull(Vec<Alignment>, Vec<Vec<Vec<crate::ast::inline::Inline>>>),
+    /// A user-provided custom block node.
+    Custom(Arc<dyn BlockNode + 'static>),
 }
 
 /// Convert a `Block` into pulldown-cmark events (owned, 'static).
@@ -112,5 +116,6 @@ pub fn block_to_events(b: &Block) -> Vec<Event<'static>> {
         Block::Table(_aligns) => vec![],
         Block::TableRow(_) => vec![],
         Block::TableFull(_, _) => vec![],
+        Block::Custom(c) => c.to_events(),
     }
 }
